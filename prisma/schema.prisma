@@ -1,0 +1,22 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // change accordingly
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  desc      String
+  slug      String   @unique
+  session   String?  // @db.Text // MySQL
+  token     String   @unique // @db.Text // MySQL
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
