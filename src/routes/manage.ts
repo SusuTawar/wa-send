@@ -1,12 +1,13 @@
-import { PrismaClient } from '@prisma/client'
 import { Router } from 'express'
 import { nanoid } from 'nanoid'
 import { genSalt, hash } from 'bcryptjs'
-import { Whatsapp } from '../module/whatsapp'
 import qrcode from 'qrcode'
+import RouteParams from './interfaces/route-params'
 
-export default (db: PrismaClient, whatsapp: Whatsapp) => {
+export default ({ db, whatsapp, passport }: RouteParams) => {
   const router = Router()
+
+  router.use(passport.authenticate('jwt', { session: false }))
 
   router.get('/', async (req, res) => {
     const projects = await db.project.findMany()
@@ -19,12 +20,42 @@ export default (db: PrismaClient, whatsapp: Whatsapp) => {
     res.json(ret)
   })
 
-  router.get('/:slug', async (req, res) => {
-    const { slug } = req.params
-    if (!slug) return res.status(400).json({ message: 'Slug is required' })
-    const project = await db.project.findFirst({
-      where: { slug },
+  router.post('/', async (req, res) => {
+    const { slug, name, desc } = req.body
+    const token = nanoid(32)
+    const salt = await genSalt(10)
+    const tokenHash = await hash(token, salt)
+
+    const project = await db.project.create({
+      data: {
+        slug,
+        name,
+        desc,
+        token: tokenHash,
+      },
     })
+
+    project.token = token
+    res.json({
+      data: project,
+      message: 'Token only shown once here',
+    })
+  })
+
+  router.use('/:slug', async (req, res, next) => {
+    const { slug } = req.params
+    const project = await db.project.findUnique({
+      where: {
+        slug,
+      },
+    })
+    if (!project) return res.status(404).json({ message: 'Project not found' })
+    req.project = project
+    next()
+  })
+
+  router.get('/:slug', async (req, res) => {
+    const { project } = req
     if (!project) return res.status(404).json({ message: 'Project not found' })
     res.json({
       name: project.name,
@@ -65,28 +96,6 @@ export default (db: PrismaClient, whatsapp: Whatsapp) => {
       const err = e as Error
       res.status(400).json({ message: err.message })
     }
-  })
-
-  router.post('/', async (req, res) => {
-    const { slug, name, desc } = req.body
-    const token = nanoid(32)
-    const salt = await genSalt(10)
-    const tokenHash = await hash(token, salt)
-
-    const project = await db.project.create({
-      data: {
-        slug,
-        name,
-        desc,
-        token: tokenHash,
-      },
-    })
-
-    project.token = token
-    res.json({
-      data: project,
-      message: 'Token only shown once here',
-    })
   })
 
   router.post('/:slug/regenerate', async (req, res) => {

@@ -19,6 +19,7 @@ export default (db: PrismaClient): Whatsapp => {
 
     client.on('disconnected', reason => {
       console.log('Client was logged out', reason)
+      client?.destroy()
       if (clients.has(project.id)) clients.delete(project.id)
       db.project.update({
         where: { id: project.id },
@@ -38,11 +39,15 @@ export default (db: PrismaClient): Whatsapp => {
     })
 
     return new Promise((resolve, reject) => {
-      client.initialize()
       let resolveCheck = false
+
+      client.initialize().catch(e => {
+        if (!resolveCheck) reject(e)
+      })
 
       const timeout = setTimeout(() => {
         client.destroy()
+        resolveCheck = true
         if (!resolveCheck) reject('Timeout')
       }, 30 * 1000); // 30 seconds
 

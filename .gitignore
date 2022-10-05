@@ -133,7 +133,7 @@ dist
 .pnp.*
 
 # sqlite development database
-.db
+prisma/dev.db
 
 # wwebjs_auth
-.wwebjs_auth/*
+.wwebjs_auth

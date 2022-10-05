@@ -1,19 +1,20 @@
-import { PrismaClient, Project } from '@prisma/client'
 import { Router } from 'express'
 import { compareSync } from 'bcryptjs'
-import { Whatsapp } from '../module/whatsapp'
+import RouteParams from './interfaces/route-params';
+import { Project } from '@prisma/client';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
-      // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-      interface Request {
-          project?: Project;
-      }
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    interface Request {
+      project?: Project
+    }
   }
 }
 
-export default (db: PrismaClient, whatsapp: Whatsapp) => {
+
+export default ({db, whatsapp}: RouteParams) => {
   const router = Router()
 
   router.use(async (req, res, next) => {
