@@ -20,6 +20,10 @@ export default (db: PrismaClient): Whatsapp => {
     client.on('disconnected', reason => {
       console.log('Client was logged out', reason)
       if (clients.has(project.id)) clients.delete(project.id)
+      db.project.update({
+        where: { id: project.id },
+        data: { active: false },
+      })
     })
 
     client.on('ready', () => {
@@ -37,7 +41,18 @@ export default (db: PrismaClient): Whatsapp => {
       client.initialize()
       let resolveCheck = false
 
-      client.on('authenticated', () => {
+      const timeout = setTimeout(() => {
+        client.destroy()
+        if (!resolveCheck) reject('Timeout')
+      }, 30 * 1000); // 30 seconds
+
+      client.on('authenticated', async () => {
+        console.log(`Client authenticated for project ${project.name}`)
+        await db.project.update({
+          where: { id: project.id },
+          data: { active: true },
+        })
+        clearTimeout(timeout)
         if (!resolveCheck) {
           resolve(true)
           resolveCheck = true
@@ -45,6 +60,7 @@ export default (db: PrismaClient): Whatsapp => {
       })
 
       client.on('qr', qr => {
+        clearTimeout(timeout)
         if (!resolveCheck) {
           resolve(qr)
           resolveCheck = true
@@ -52,6 +68,7 @@ export default (db: PrismaClient): Whatsapp => {
       })
 
       client.on('auth_failure', async reason => {
+        clearTimeout(timeout)
         reject(reason)
       })
     })

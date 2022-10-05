@@ -17,7 +17,7 @@ export default (db: PrismaClient, whatsapp: Whatsapp) => {
   const router = Router()
 
   router.use(async (req, res, next) => {
-    const { 'x-token':token } = req.headers
+    const token = req.headers.authorization?.split(' ')[1]
     if (!token) return res.status(401).json({ message: 'Token is required' })
     const projects = await db.project.findMany();
     const project = projects.find((project) => {
@@ -28,12 +28,16 @@ export default (db: PrismaClient, whatsapp: Whatsapp) => {
     next()
   })
 
-  router.post('/', (req, res) => {
+  router.post('/', async (req, res) => {
     const { message, to } = req.body
     const { project } = req
     if (!project) return res.status(404).json({ message: 'Project not found' })
-    whatsapp.clients.get(project.id)?.sendMessage(`${to}@c.us`, message) // use d.ts for group
-    res.json({ message: 'Message sent' })
+    try {
+      await whatsapp.clients.get(project.id)?.sendMessage(`${to}@c.us`, message) // use d.ts for group
+      res.json({ message: 'Message sent' })
+    } catch (error) {
+      res.status(500).json({ message: `Failed to send message: ${(error as Error).message}` })
+    }
   })
 
   return router

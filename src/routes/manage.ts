@@ -34,11 +34,21 @@ export default (db: PrismaClient, whatsapp: Whatsapp) => {
   })
 
   router.get('/:slug/start', async (req, res) => {
+    const { type } = req.query
     const { slug } = req.params
     try {
       const qr = await whatsapp.load(slug)
-      if (typeof qr === 'string')
-        return qrcode.toFileStream(res, qr)
+      if (typeof qr === 'string') {
+        switch (type) {
+          case 'image':
+            return qrcode.toFileStream(res, qr)
+          default:
+            return res.json({
+              qr: qrcode.toDataURL(qr),
+              message: 'Scan this QR code',
+            })
+        }
+      }
       res.json({ message: 'Client started' })
     } catch (e) {
       const err = e as Error

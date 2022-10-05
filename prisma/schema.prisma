@@ -15,8 +15,19 @@ model Project {
   name      String
   desc      String
   slug      String   @unique
-  session   String?  // @db.Text // MySQL
-  token     String   @unique // @db.Text // MySQL
+  token     String   @unique
+  active    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+}
+
+model User {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
 }
