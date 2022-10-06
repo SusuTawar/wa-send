@@ -46,7 +46,6 @@ config()
       }),
     )
     if (err) {
-      console.log(err)
       process.exit(1)
     }
     const resP = (res as Project[]).map(async project => {

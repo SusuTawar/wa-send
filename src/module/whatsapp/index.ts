@@ -1,7 +1,7 @@
 import { PrismaClient } from '.prisma/client'
 import { Client, LocalAuth } from 'whatsapp-web.js'
 import { join } from 'path'
-import { rmdir, existsSync } from 'fs'
+import { existsSync, rm } from 'fs'
 
 export default (db: PrismaClient): Whatsapp => {
   const clients = new Map<string, Client>()
@@ -71,6 +71,7 @@ export default (db: PrismaClient): Whatsapp => {
 
       client.on('qr', qr => {
         clearTimeout(timeout)
+        removeSessionFolder(project.id)
         if (!resolveCheck) {
           resolve(qr)
           resolveCheck = true
@@ -80,8 +81,8 @@ export default (db: PrismaClient): Whatsapp => {
       client.on('auth_failure', async reason => {
         resolveCheck = true
         clearTimeout(timeout)
+        removeSessionFolder(project.id)
         if (!resolveCheck) {
-          removeSessionFolder(project.id)
           reject(reason)
         }
       })
@@ -90,8 +91,12 @@ export default (db: PrismaClient): Whatsapp => {
 
   function removeSessionFolder(clientId:string) {
     const sessionPath = join(__dirname, '../../../.wwebjs_auth', `session-${clientId}`)
+    db.project.update({
+      where: { id: clientId },
+      data: { active: false },
+    })
     if (existsSync(sessionPath))
-      rmdir(sessionPath, { recursive: true }, (err) => console.error(err));
+      rm(sessionPath, { recursive: true }, (err) => err && console.log(err));
   }
 
   async function remove(slug: string): Promise<void> {
